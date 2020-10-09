@@ -26,22 +26,21 @@
 typedef unsigned char byte_t;
 typedef unsigned long long hex_t;
 
-// Use this for every module
 typedef struct module
 {
-    // The address/offset for this module
+    /// The address/offset for this module
     vm_address_t address;
-    // The original data at address, this shouldn't be changed
+    /// The original data at address, this shouldn't be changed
     byte_t original[MAX_DATA_LENGTH / 2];
-    // Hex string for searching
+    /// Hex string for searching
     char search[MAX_DATA_LENGTH];
-    // Hex string to replace the original one, MUST be the same length as search
+    /// Hex string to replace the original one, MUST be the same length as search
     char replace[MAX_DATA_LENGTH];
-    // The offset to the true address
+    /// The offset to the true address
     int offset;
 } Module;
 
-// Check if the process has ASLR, offset
+/// Check if the process has ASLR/offset
 static bool hasASLR()
 {
     const struct mach_header *mach;
@@ -50,13 +49,13 @@ static bool hasASLR()
     return mach->flags & MH_PIE;
 }
 
-// Return the offset of the process
+/// Return the offset of the process
 static vm_address_t getOffset()
 {
     return _dyld_get_image_vmaddr_slide(0);
 }
 
-// Add offset if available and return the address in memory
+/// Add offset to the address if available and return the address in memory
 static vm_address_t memoryAddress(vm_address_t address)
 {
     if (hasASLR())
@@ -64,7 +63,7 @@ static vm_address_t memoryAddress(vm_address_t address)
     return address;
 }
 
-// Convert string to bytes
+/// Convert string to bytes
 static byte_t *convert(char data[MAX_DATA_LENGTH])
 {
     unsigned long dataLen = strlen(data);
@@ -84,7 +83,9 @@ static byte_t *convert(char data[MAX_DATA_LENGTH])
     return hex;
 }
 
-// Write data to a module
+/// Write data to a module
+/// m - module
+/// replace - use the replace string if true and use the original if false
 void vm_writeData(Module m, int replace)
 {
     // No address found
@@ -133,7 +134,9 @@ void vm_writeData(Module m, int replace)
         free(hex);
 }
 
-// Free a byte list
+/// Free a byte list
+/// list - the byte list
+/// size - the size of list
 static void freeByteList(byte_t **list, int size)
 {
     if (list == NULL)
@@ -145,8 +148,10 @@ static void freeByteList(byte_t **list, int size)
     free(list);
 }
 
-// Search and set the address for all modules
-// size is the size of the module, end is the size of the binary used as the end address
+/// Search and set the address for all modules
+/// moduleList - an array of modules
+/// size - the size of the module list
+/// binarySize - the size of the app binary or any number for the end address
 void vm_searchData(Module *moduleList, int size, hex_t binarySize)
 {
     // Convert search to actual hex values
