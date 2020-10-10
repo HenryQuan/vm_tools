@@ -45,7 +45,8 @@ typedef struct module
 
 /// Print a single module
 static void printModule(Module m) {
-    LOG"[VM_TOOL] Address: 0x%lx\nSearch - %lu\nReplace - %lu\nOffset - %d\n", m.address, strlen(m.search), strlen(m.replace), m.offset);
+    LOG"[VM_TOOL] Address: 0x%lx\nSearch - %lu\nReplace - %lu\nOffset - %d\n",
+        m.address, strlen(m.search), strlen(m.replace), m.offset);
 }
 
 /// Print a list of modules
@@ -80,10 +81,14 @@ static vm_address_t memoryAddress(vm_address_t address)
 /// Convert string to bytes
 static byte_t *convert(char data[MAX_DATA_LENGTH])
 {
+    LOG"[VM_TOOL] Converting %s\n", data);
     unsigned long dataLen = strlen(data);
     // The character count must be even and not over the max length
     if (dataLen > MAX_DATA_LENGTH || dataLen % 2 != 0)
+    {
+        LOG"[VM_TOOL] Conversion failed\n");
         return NULL;
+    }
 
     unsigned long hexLen = dataLen / 2;
     byte_t *hex = (byte_t *)calloc(0, sizeof(byte_t) * hexLen);
@@ -114,7 +119,7 @@ void vm_writeData(Module m, int replace)
     // the size should be the string length / 2 and that's it, shared by both
     unsigned long hexSize;
 
-    LOG"[VM_TOOL] Write to 0x%lx (0x%lx)", address, m.address);
+    LOG"[VM_TOOL] Write to 0x%lx (0x%lx)\n", address, m.address);
 
     if (replace > 0)
     {
@@ -195,7 +200,8 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
 
     LOG"[VM_TOOL] Binary: 0x%lx - 0x%lx\n", start, end);
 
-    int chunk = getpagesize();
+    vm_address_t chunk = binarySize / 10;
+    LOG"[VM_TOOL] Reading 0x%lx per chunk\n", chunk);
     vm_size_t bytes = chunk;
     byte_t binary[chunk];
     // Check how many addresses we have found, setting it to error count ignores error
@@ -203,10 +209,11 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
 
     for (vm_address_t currAddress = start; currAddress < end; currAddress += chunk)
     {
+        LOG"[VM_TOOL] Reading: 0x%lx - 0x%lx\n", currAddress, currAddress + chunk);
         err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)&binary, &bytes);
         if (err != KERN_SUCCESS)
             return;
-
+        
         for (int i = 0; i < chunk; i++)
         {
             // Check if anything matches with the list
@@ -216,6 +223,9 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
                 Module *currModule = moduleList + j;
                 unsigned long hexLen = strlen(currModule->search) / 2;
                 byte_t *currHex = hex[j];
+                // Ignore incorrect hex
+                if (currHex == NULL)
+                    continue;
 
                 // Check if it matches with the first
                 if (currHex[0] == binary[i])
@@ -240,6 +250,7 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
                         // currAddress is the start of this chunk so we need to add the current offset
                         currModule->address = (currAddress + i) - aslr;
                         found++;
+                        LOG"[VM TOOL] Found module %d at 0x%lx\n", j, currModule->address);
                     }
 
                     // Everything has found so return early

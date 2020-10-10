@@ -19,7 +19,7 @@
     NSString *appPath = [[NSBundle mainBundle] resourcePath];
     NSString *appName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleExecutable"];
     NSString *binaryPath = [NSString stringWithFormat:@"%@/%@", appPath, appName];
-    NSLog(@"Current app path is %@", appPath);
+    NSLog(@"[APP TOOL] Current app path is %@\n", appPath);
     
     // Read app binary size
     NSFileManager *fileManager = [NSFileManager defaultManager];
