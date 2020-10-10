@@ -22,6 +22,9 @@
 #define MAX_DATA_LENGTH 128
 #define FALSE 0
 #define NOT_FOUND 0
+// If you are using objc, use the second one
+//#define LOG printf(
+#define LOG NSLog(@
 
 typedef unsigned char byte_t;
 typedef unsigned long long hex_t;
@@ -39,6 +42,17 @@ typedef struct module
     /// The offset to the true address
     int offset;
 } Module;
+
+/// Print a single module
+static void printModule(Module m) {
+    LOG"[VM_TOOL] Address: 0x%lx\nSearch - %lu\nReplace - %lu\nOffset - %d\n", m.address, strlen(m.search), strlen(m.replace), m.offset);
+}
+
+/// Print a list of modules
+static void printModuleList(Module *list, int size) {
+    for (int i = 0; i < size; i++)
+        printModule(list[i]);
+}
 
 /// Check if the process has ASLR/offset
 static bool hasASLR()
@@ -100,7 +114,7 @@ void vm_writeData(Module m, int replace)
     // the size should be the string length / 2 and that's it, shared by both
     unsigned long hexSize;
 
-    printf("Write to 0x%lx (0x%lx)", address, m.address);
+    LOG"[VM_TOOL] Write to 0x%lx (0x%lx)", address, m.address);
 
     if (replace > 0)
     {
@@ -179,7 +193,7 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
     vm_address_t start = offset;
     vm_address_t end = start + binarySize;
 
-    printf("VM Binary: 0x%lx - 0x%lx\n", start, end);
+    LOG"[VM_TOOL] Binary: 0x%lx - 0x%lx\n", start, end);
 
     int chunk = getpagesize();
     vm_size_t bytes = chunk;
