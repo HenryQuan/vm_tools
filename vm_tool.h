@@ -200,7 +200,7 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
 
     LOG"[VM_TOOL] Binary: 0x%lx - 0x%lx\n", start, end);
 
-    vm_address_t chunk = binarySize / 10;
+    vm_address_t chunk = getpagesize();
     LOG"[VM_TOOL] Reading 0x%lx per chunk\n", chunk);
     vm_size_t bytes = chunk;
     byte_t binary[chunk];
@@ -209,7 +209,6 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
 
     for (vm_address_t currAddress = start; currAddress < end; currAddress += chunk)
     {
-        LOG"[VM_TOOL] Reading: 0x%lx - 0x%lx\n", currAddress, currAddress + chunk);
         err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)&binary, &bytes);
         if (err != KERN_SUCCESS)
             return;
@@ -246,11 +245,15 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
                     // found the address
                     if (k == hexLen)
                     {
-                        // (memory address - aslr) gets the right address in IDA
-                        // currAddress is the start of this chunk so we need to add the current offset
-                        currModule->address = (currAddress + i) - aslr;
-                        found++;
-                        LOG"[VM TOOL] Found module %d at 0x%lx\n", j, currModule->address);
+                        // A temp fix so that we won't find duplicate addresses
+                        if (currModule->address == 0)
+                        {
+                            // (memory address - aslr) gets the right address in IDA
+                            // currAddress is the start of this chunk so we need to add the current offset
+                            currModule->address = (currAddress + i) - aslr;
+                            LOG"[VM_TOOL] Found module %d at 0x%lx\n", j, currModule->address);
+                            found++;
+                        }
                     }
 
                     // Everything has found so return early
