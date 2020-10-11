@@ -1,11 +1,11 @@
 /* 
  Originally based on Razzile & HackJack's vm_writeData,
  Modified and formatted by HenryQuan.
- Repo: https://github.com/HenryQuan/zhao
+ Repo: https://github.com/HenryQuan/vm_tools
  
  This header includes functions necessary for virtual memory searching and writing.
  This is built to search only the binary section.
- Only tested on iOS 13.7 ARM64, Mac OS and ARMv7 are not tested.
+ Only tested on iOS 13.7/12.4.8 ARM64, Mac OS and ARMv7 are not tested.
  Use this only for educational or research purposes.
  MIT LICENSE
 
@@ -21,6 +21,8 @@
 
 #define MAX_DATA_LENGTH 128
 #define FALSE 0
+#define CHUNK_SIZE 0x10000
+
 #define NOT_FOUND 0
 // If you are using objc, use the second one
 //#define LOG printf(
@@ -28,6 +30,7 @@
 
 typedef unsigned char byte_t;
 typedef unsigned long long hex_t;
+typedef unsigned long size_t;
 
 typedef struct module
 {
@@ -81,16 +84,16 @@ static vm_address_t memoryAddress(vm_address_t address)
 /// Convert string to bytes
 static byte_t *convert(char data[MAX_DATA_LENGTH])
 {
-    LOG"[VM_TOOL] Converting %s\n", data);
-    unsigned long dataLen = strlen(data);
+    LOG"[VM_TOOL] Converting '%s' to bytes\n", data);
+    size_t dataLen = strlen(data);
     // The character count must be even and not over the max length
     if (dataLen == 0 || dataLen > MAX_DATA_LENGTH || dataLen % 2 != 0)
     {
-        LOG"[VM_TOOL] Conversion failed\n");
+        LOG"[VM_TOOL] Conversion failed or the string wasn't valid\n");
         return NULL;
     }
 
-    unsigned long hexLen = dataLen / 2;
+    size_t hexLen = dataLen / 2;
     byte_t *hex = (byte_t *)calloc(0, sizeof(byte_t) * hexLen);
     // Join two char together and convert it to a byte
     for (int i = 0; i < hexLen; i++)
@@ -117,9 +120,9 @@ void vm_writeData(Module m, int replace)
     // Add offset to get the true address
     vm_address_t address = memoryAddress(m.address);
     // the size should be the string length / 2 and that's it, shared by both
-    unsigned long hexSize;
+    size_t hexSize;
 
-    LOG"[VM_TOOL] Write to 0x%lx (0x%lx)\n", address, m.address);
+    LOG"[VM_TOOL] Writing to 0x%lx (0x%lx)\n", address, m.address);
 
     if (replace > 0)
     {
@@ -133,7 +136,7 @@ void vm_writeData(Module m, int replace)
     }
     else
     {
-        LOG"[VM_TOOL] Write to 0x%lx (0x%lx)\n", address, m.address);
+        LOG"[VM_TOOL] Reverting to the original\n");
         
         // original save everything
         hexSize = strlen(m.search) / 2;
@@ -173,10 +176,10 @@ void vm_readData(Module *moduleList, int size)
         }
         
         // Check if string is entered
-        unsigned long hexLen = strlen((char *)curr->search);
+        size_t hexLen = strlen((char *)curr->search);
         if (hexLen == 0 || hexLen % 2 != 0)
         {
-            LOG"[VM_TOOL] Module %d's original string is not set or not valid", i);
+            LOG"[VM_TOOL] Module %d's original string is not valid", i);
             continue;
         }
         
@@ -232,7 +235,6 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
         return;
     }
 
-    kern_return_t err;
     mach_port_t port = mach_task_self();
     // Get offset, start and end addresses
     vm_address_t aslr = getOffset();
@@ -240,22 +242,29 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
     vm_address_t start = offset;
     vm_address_t end = start + binarySize;
 
-    LOG"[VM_TOOL] Binary: 0x%lx - 0x%lx\n", start, end);
-
-    vm_address_t chunk = getpagesize();
+    vm_address_t chunk = CHUNK_SIZE;
     LOG"[VM_TOOL] Reading 0x%lx per chunk\n", chunk);
-    vm_size_t bytes = chunk;
-    byte_t binary[chunk];
+    LOG"[VM_TOOL] Reading from 0x%lx to 0x%lx\n", start, end);
+    byte_t binary[CHUNK_SIZE] = {0};
+    // This tracks how many bytes we read
+    vm_size_t bytes = 0;
     // Check how many addresses we have found, setting it to error count ignores error
     int found = errorCount;
 
     for (vm_address_t currAddress = start; currAddress < end; currAddress += chunk)
     {
-        err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)&binary, &bytes);
-        if (err != KERN_SUCCESS)
+        // Don't read more than the end address
+        vm_address_t diff = end - currAddress;
+        if (diff < chunk)
+            chunk = diff;
+        
+        // Reset binary before reading
+        memset(&binary, 0, chunk);
+        vm_read_overwrite(port, currAddress, chunk, (vm_offset_t)&binary, &bytes);
+        if (!bytes)
         {
             LOG"[VM_TOOL] Error while reading at address 0x%lx", currAddress);
-            return;
+            continue;
         }
         
         for (int i = 0; i < chunk; i++)
@@ -265,7 +274,7 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
             {
                 // This is the only way to read
                 Module *currModule = moduleList + j;
-                unsigned long hexLen = strlen(currModule->search) / 2;
+                size_t hexLen = strlen(currModule->search) / 2;
                 byte_t *currHex = hex[j];
                 // Ignore incorrect hex
                 if (currHex == NULL)
