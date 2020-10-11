@@ -82,7 +82,13 @@ static byte_t *convert(char data[MAX_DATA_LENGTH])
     }
 
     size_t hexLen = dataLen / 2;
-    byte_t *hex = (byte_t *)calloc(0, sizeof(byte_t) * hexLen);
+    byte_t *hex = (byte_t *)malloc(sizeof(byte_t) * hexLen);
+    if (hex == NULL)
+    {
+        LOG"[VM_TOOL] Out of memory\n");
+        return NULL;
+    }
+    
     // Join two char together and convert it to a byte
     for (int i = 0; i < hexLen; i++)
     {
@@ -197,7 +203,6 @@ static void freeByteList(byte_t **list, int size)
     // Free everything inside the list
     for (int i = 0; i < size; i++)
         free(list[i]);
-    free(list);
 }
 
 /// Search and set the address for all modules
@@ -207,7 +212,7 @@ static void freeByteList(byte_t **list, int size)
 void vm_searchData(Module *moduleList, int size, hex_t binarySize)
 {
     // Convert search to actual hex values
-    byte_t **hex = (byte_t **)malloc(sizeof(byte_t *) * size);
+    byte_t *hex[size];
     int errorCount = 0;
     for (int i = 0; i < size; i++)
     {
