@@ -180,7 +180,11 @@ void vm_readData(Module *moduleList, int size)
         
         vm_size_t bytes = hexLen / 2;
         vm_address_t currAddress = memoryAddress(curr->address);
-        kern_return_t err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)curr->search, &bytes);
+        
+        // Clear original
+        memset(curr->original, 0, hexLen);
+        // Read hex to original
+        kern_return_t err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)curr->original, &bytes);
         if (err != KERN_SUCCESS)
         {
             LOG"[VM_TOOL] Error while reading at address 0x%lx", currAddress);
