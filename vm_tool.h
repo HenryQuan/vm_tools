@@ -46,18 +46,6 @@ typedef struct module
     int offset;
 } Module;
 
-/// Print a single module
-static void printModule(Module m) {
-    LOG"[VM_TOOL] Address: 0x%lx\nSearch - %lu\nReplace - %lu\nOffset - %d\n",
-        m.address, strlen(m.search), strlen(m.replace), m.offset);
-}
-
-/// Print a list of modules
-void printModuleList(Module *list, int size) {
-    for (int i = 0; i < size; i++)
-        printModule(list[i]);
-}
-
 /// Check if the process has ASLR/offset
 static bool hasASLR()
 {
