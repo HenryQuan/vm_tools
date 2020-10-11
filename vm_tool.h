@@ -50,7 +50,7 @@ static void printModule(Module m) {
 }
 
 /// Print a list of modules
-static void printModuleList(Module *list, int size) {
+void printModuleList(Module *list, int size) {
     for (int i = 0; i < size; i++)
         printModule(list[i]);
 }
@@ -84,7 +84,7 @@ static byte_t *convert(char data[MAX_DATA_LENGTH])
     LOG"[VM_TOOL] Converting %s\n", data);
     unsigned long dataLen = strlen(data);
     // The character count must be even and not over the max length
-    if (dataLen > MAX_DATA_LENGTH || dataLen % 2 != 0)
+    if (dataLen == 0 || dataLen > MAX_DATA_LENGTH || dataLen % 2 != 0)
     {
         LOG"[VM_TOOL] Conversion failed\n");
         return NULL;
@@ -153,6 +153,42 @@ void vm_writeData(Module m, int replace)
         free(hex);
 }
 
+/// Read the original hex at the address for all modules
+/// moduleList - an array of modules
+/// size - the size of the module list
+void vm_readData(Module *moduleList, int size)
+{
+    mach_port_t port = mach_task_self();
+    
+    for (int i = 0; i < size; i++)
+    {
+        Module *curr = moduleList + i;
+        // Check if address is valid
+        if (curr->address == 0)
+        {
+            LOG"[VM_TOOL] Module %d's address is not set", i);
+            continue;;
+        }
+        
+        // Check if string is entered
+        unsigned long hexLen = strlen((char *)curr->search);
+        if (hexLen == 0 || hexLen % 2 != 0)
+        {
+            LOG"[VM_TOOL] Module %d's original string is not set or not valid", i);
+            continue;
+        }
+        
+        vm_size_t bytes = hexLen / 2;
+        vm_address_t currAddress = memoryAddress(curr->address);
+        kern_return_t err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)curr->search, &bytes);
+        if (err != KERN_SUCCESS)
+        {
+            LOG"[VM_TOOL] Error while reading at address 0x%lx", currAddress);
+            return;
+        }
+    }
+}
+
 /// Free a byte list
 /// list - the byte list
 /// size - the size of list
@@ -211,7 +247,10 @@ void vm_searchData(Module *moduleList, int size, hex_t binarySize)
     {
         err = vm_read_overwrite(port, currAddress, bytes, (vm_offset_t)&binary, &bytes);
         if (err != KERN_SUCCESS)
+        {
+            LOG"[VM_TOOL] Error while reading at address 0x%lx", currAddress);
             return;
+        }
         
         for (int i = 0; i < chunk; i++)
         {
