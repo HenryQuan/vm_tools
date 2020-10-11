@@ -82,6 +82,7 @@ static byte_t *convert(char data[MAX_DATA_LENGTH])
     }
 
     size_t hexLen = dataLen / 2;
+    // calloc crashes sometimes so use malloc instead
     byte_t *hex = (byte_t *)malloc(sizeof(byte_t) * hexLen);
     if (hex == NULL)
     {
@@ -203,6 +204,7 @@ static void freeByteList(byte_t **list, int size)
     // Free everything inside the list
     for (int i = 0; i < size; i++)
         free(list[i]);
+    // list is an array so no need to free
 }
 
 /// Search and set the address for all modules
