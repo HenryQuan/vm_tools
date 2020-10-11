@@ -133,6 +133,8 @@ void vm_writeData(Module m, int replace)
     }
     else
     {
+        LOG"[VM_TOOL] Write to 0x%lx (0x%lx)\n", address, m.address);
+        
         // original save everything
         hexSize = strlen(m.search) / 2;
         // Write back the original value or replacing the original
