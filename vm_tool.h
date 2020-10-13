@@ -61,6 +61,12 @@ static vm_address_t getOffset()
     return _dyld_get_image_vmaddr_slide(0);
 }
 
+/// Return the offset of the second item in the memory which can be used as the end of the binary
+static vm_address_t getEndAddress()
+{
+    return _dyld_get_image_vmaddr_slide(1);
+}
+
 /// Add offset to the address if available and return the address in memory
 static vm_address_t memoryAddress(vm_address_t address)
 {
