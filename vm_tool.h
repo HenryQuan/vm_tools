@@ -202,6 +202,11 @@ static void freeByteList(byte_t** list, int size) {
     // list is an array so no need to free
 }
 
+/// An experimental search data without passing in binarySize
+void vm_searchDataEx(Module* moduleList, int size) {
+    vm_searchData(moduleList, size, getEndAddress());
+}
+
 // TODO: this doesn't work if the value is in between segments
 /// Search and set the address for all modules
 /// moduleList - an array of modules
