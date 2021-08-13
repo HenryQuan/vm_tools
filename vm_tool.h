@@ -12,8 +12,8 @@
  - PsychoBird's SearchKit, https://github.com/PsychoBird/RevelariOS
 */
 
-#ifndef VM_TOOL_H
-#define VM_TOOL_H
+#ifndef _VM_TOOL_H_
+#define _VM_TOOL_H_
 
 #include <mach-o/dyld.h>
 #include <mach/mach.h>
@@ -25,9 +25,9 @@
 #define NOT_FOUND 0
 
 #if __MACH__
-#define LOG(msg, ...) NSLog(@msg, __VA_ARGS__)
+#define LOG(...) NSLog(@__VA_ARGS__)
 #else
-#define LOG(msg, ...) printf(msg, __VA_ARGS__)
+#define LOG(...) printf(__VA_ARGS__)
 #endif
 
 typedef unsigned char byte_t;
@@ -202,11 +202,6 @@ static void freeByteList(byte_t** list, int size) {
     // list is an array so no need to free
 }
 
-/// An experimental search data without passing in binarySize
-void vm_searchDataEx(Module* moduleList, int size) {
-    vm_searchData(moduleList, size, getEndAddress());
-}
-
 // TODO: this doesn't work if the value is in between segments
 /// Search and set the address for all modules
 /// moduleList - an array of modules
@@ -312,6 +307,11 @@ void vm_searchData(Module* moduleList, int size, hex_t binarySize) {
 
     freeByteList(hex, size);
     return;
+}
+
+/// An experimental search data without passing in binarySize
+void vm_searchDataEx(Module* moduleList, int size) {
+    vm_searchData(moduleList, size, getEndAddress());
 }
 
 #endif
