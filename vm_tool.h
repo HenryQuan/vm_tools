@@ -311,7 +311,7 @@ void vm_searchData(Module* moduleList, int size, hex_t binarySize) {
 
 /// An experimental search data without passing in binarySize
 void vm_searchDataEx(Module* moduleList, int size) {
-    vm_searchData(moduleList, size, getEndAddress());
+    vm_searchData(moduleList, size, getEndAddress() - getOffset());
 }
 
 #endif
